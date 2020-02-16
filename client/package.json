@@ -1,0 +1,26 @@
+{
+    "name": "badass-term",
+    "version": "1.0.0",
+    "license": "MIT",
+    "scripts": {
+        "dev-server": "encore dev-server",
+        "dev": "encore dev",
+        "watch": "encore dev --watch",
+        "build": "encore production --progress",
+        "start": "tsc"
+    },
+    "devDependencies": {
+    },
+    "dependencies": {
+        "@symfony/webpack-encore": "^0.28.2",
+        "node-sass": "^4.13.1",
+        "sass-loader": "^7.0.1",
+        "ts-loader": "^5.3.0",
+        "typescript": "^3.7.5",
+        "ws": "^7.2.1",
+        "xterm": "^4.3.0",
+        "xterm-addon-attach": "^0.4.0",
+        "xterm-addon-fit": "^0.3.0",
+        "xterm-addon-web-links": "^0.2.1"
+    }
+}

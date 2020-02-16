@@ -1,0 +1,21 @@
+{
+    "name": "badass-term",
+    "version": "1.0.0",
+    "license": "MIT",
+    "scripts": {
+        "watch": "nodemon",
+        "build": "tsc",
+        "start": "node build/app.js"
+    },
+    "dependencies": {
+        "@types/node": "^13.5.0",
+        "node-pty": "^0.9.0",
+        "node-static": "^0.7.11",
+        "typescript": "^3.7.5",
+        "ws": "^7.2.1",
+        "xterm": "^4.3.0"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.2"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "watch": [
+        "src",
+        "../client/public/build"
+    ],
+    "ext":  "ts,json",
+    "exec": "yarn build; yarn start"
+}

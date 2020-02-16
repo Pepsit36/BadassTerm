@@ -1,0 +1,10 @@
+@import "~xterm";
+
+body {
+  margin: 0;
+}
+
+html, body, #xterm-container {
+  width: 100%;
+  height: 100%;
+}
