@@ -9,8 +9,7 @@
         "build": "encore production --progress",
         "start": "tsc"
     },
-    "devDependencies": {
-    },
+    "devDependencies": {},
     "dependencies": {
         "@symfony/webpack-encore": "^0.28.2",
         "node-sass": "^4.13.1",
