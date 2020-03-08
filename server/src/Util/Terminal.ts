@@ -49,16 +49,16 @@ export default class Terminal {
 
             const tty = ttyShared || this.connectTTY();
 
-            ws.on('message', (msg) => {
-                if (msg.startsWith('ESCAPED|-- ')) {
-                    if (msg.startsWith('ESCAPED|-- RESIZE:')) {
-                        msg = msg.substr(18);
-                        let cols = msg.slice(0, -4);
-                        let rows = msg.substr(4);
+            ws.on('message', (message) => {
+                if (typeof message === 'string' && message.startsWith('ESCAPED|-- ')) {
+                    if (message.startsWith('ESCAPED|-- RESIZE:')) {
+                        message = message.substr(18);
+                        let cols = message.slice(0, -4);
+                        let rows = message.substr(4);
                         tty.resize(Number(cols), Number(rows));
                     }
                 } else {
-                    tty.write(msg);
+                    tty.write(message);
                 }
             });
 
