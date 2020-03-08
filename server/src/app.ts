@@ -14,8 +14,8 @@ if (!fs.existsSync('../client/public/build/manifest.json')) {
 
 const manifest = require('../../client/public/build/manifest.json');
 
-const host = Config.get('LISTEN_HOST');
-const port = Config.getNumber('LISTEN_PORT');
+const host = Config.getString('HOST');
+const port = Config.getNumber('PORT');
 
 const server: Server = http.createServer((req, res) => {
     req.addListener('end', () => {

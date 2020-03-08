@@ -2,18 +2,52 @@ import * as pty from 'node-pty';
 import {IPty} from 'node-pty';
 import {Server} from 'http';
 import {Server as WsServer} from 'ws';
+import Config from './Config';
 
 export default class Terminal {
     private wsServer: WsServer;
+
+    private shareTTY: Boolean = Config.getBoolean('SHARE_TTY');
+    private initCMD: string = Config.getString('INIT_CMD');
 
     constructor(server: Server) {
         this.wsServer = new WsServer({
             server: server
         });
+        let ttyShared = undefined;
+        let buffer = undefined;
 
+        if (this.shareTTY) {
+            ttyShared = this.connectTTY();
+            buffer = '';
+
+            const connectTTYSharedEvents = () => {
+                ttyShared.onData((data: string) => {
+                    buffer += data;
+
+                    // When clear signal received
+                    if (Buffer.from(data).toString('base64') === 'G1tIG1sySg==') {
+                        buffer = '';
+                        console.log('Buffer cleared');
+                    }
+                });
+
+                ttyShared.onExit((data) => {
+                    ttyShared = this.connectTTY();
+                    buffer = '';
+                    connectTTYSharedEvents();
+                });
+            };
+
+            connectTTYSharedEvents();
+        }
 
         this.wsServer.on('connection', (ws) => {
-            const tty = this.onConnected();
+            if (this.shareTTY) {
+                ws.send(buffer);
+            }
+
+            const tty = ttyShared || this.connectTTY();
 
             ws.on('message', (msg) => {
                 if (msg.startsWith('ESCAPED|-- ')) {
@@ -22,32 +56,23 @@ export default class Terminal {
                         let cols = msg.slice(0, -4);
                         let rows = msg.substr(4);
                         tty.resize(Number(cols), Number(rows));
-                        this.onResized(cols, rows);
                     }
                 } else {
                     tty.write(msg);
                 }
             });
 
-            tty.onData((data) => {
-                try {
-                    ws.send(data);
-                } catch (e) {
-                    // Websocket closed
-                }
+            tty.onData((data: string) => {
+                ws.send(data);
             });
 
             tty.onExit((data) => {
                 ws.send('Session Closed - Refresh to start a new Session.');
             });
-
-            ws.on('close', () => {
-                this.onDisconnected();
-            });
         });
     }
 
-    private onConnected(): IPty {
+    private connectTTY(): IPty {
         const tty = pty.spawn('bash', [], {
             name: 'xterm-color',
             cols: 80,
@@ -56,15 +81,8 @@ export default class Terminal {
             env: process.env
         });
 
-        tty.write('cd ~\n');
-        tty.write('clear\n');
+        tty.write(`${this.initCMD}\n`);
 
         return tty;
-    }
-
-    private onResized(cols, rows) {
-    }
-
-    private onDisconnected() {
     }
 }

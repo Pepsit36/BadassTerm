@@ -10,11 +10,20 @@ export default new class Config {
         }
     }
 
-    get(name: string): string {
+    private get(name: string) {
         return this.envVars[name];
     }
 
-    getNumber(name: string): number {
+    public getString(name: string): string {
+        return String(this.envVars[name]);
+    }
+
+    public getNumber(name: string): number {
         return parseInt(this.get(name));
+    }
+
+    public getBoolean(name: string): boolean {
+        const value = this.get(name);
+        return value === 'true' || value === true;
     }
 };
