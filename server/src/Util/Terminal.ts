@@ -1,79 +1,42 @@
 import * as pty from 'node-pty';
 import {IPty} from 'node-pty';
-import {Server} from 'http';
-import {Server as WsServer} from 'ws';
 import Config from './Config';
 
 export default class Terminal {
-    private wsServer: WsServer;
-
-    private shareTTY: Boolean = Config.getBoolean('SHARE_TTY');
     private initCMD: string = Config.getString('INIT_CMD');
+    private tty: IPty;
 
-    constructor(server: Server) {
-        this.wsServer = new WsServer({
-            server: server
+    constructor() {
+        this.connectTTY();
+
+        this.tty.onData((data: string) => {
+            this.onData(data);
         });
-        let ttyShared = undefined;
-        let buffer = undefined;
 
-        if (this.shareTTY) {
-            ttyShared = this.connectTTY();
-            buffer = '';
-
-            const connectTTYSharedEvents = () => {
-                ttyShared.onData((data: string) => {
-                    buffer += data;
-
-                    // When clear signal received
-                    if (Buffer.from(data).toString('base64') === 'G1tIG1sySg==') {
-                        buffer = '';
-                        console.log('Buffer cleared');
-                    }
-                });
-
-                ttyShared.onExit((data) => {
-                    ttyShared = this.connectTTY();
-                    buffer = '';
-                    connectTTYSharedEvents();
-                });
-            };
-
-            connectTTYSharedEvents();
-        }
-
-        this.wsServer.on('connection', (ws) => {
-            if (this.shareTTY) {
-                ws.send(buffer);
-            }
-
-            const tty = ttyShared || this.connectTTY();
-
-            ws.on('message', (message) => {
-                if (typeof message === 'string' && message.startsWith('ESCAPED|-- ')) {
-                    if (message.startsWith('ESCAPED|-- RESIZE:')) {
-                        message = message.substr(18);
-                        let cols = message.slice(0, -4);
-                        let rows = message.substr(4);
-                        tty.resize(Number(cols), Number(rows));
-                    }
-                } else {
-                    tty.write(message);
-                }
-            });
-
-            tty.onData((data: string) => {
-                ws.send(data);
-            });
-
-            tty.onExit((data) => {
-                ws.send('Session Closed - Refresh to start a new Session.');
-            });
+        this.tty.onExit((data: { exitCode: number, signal?: number }) => {
+            this.onExit(data);
         });
     }
 
-    private connectTTY(): IPty {
-        const tty = pty.spawn('bash', [], {
+    public onData: (data: string) => void;
+
+    public onExit: (data: { exitCode: number, signal?: number }) => void;
+
+    public write(message) {
+        if (typeof message === 'string' && message.startsWith('ESCAPED|-- ')) {
+            if (message.startsWith('ESCAPED|-- RESIZE:')) {
+                message = message.substr(18);
+                let cols = message.slice(0, -4);
+                let rows = message.substr(4);
+                this.tty.resize(Number(cols), Number(rows));
+            }
+        } else {
+            this.tty.write(message);
+        }
+    }
+
+    private connectTTY() {
+        this.tty = pty.spawn('bash', [], {
             name: 'xterm-color',
             cols: 80,
             rows: 24,
@@ -81,8 +44,6 @@ export default class Terminal {
             env: process.env
         });
 
-        tty.write(`${this.initCMD}\n`);
-
-        return tty;
+        this.tty.write(`${this.initCMD}\n`);
     }
 }

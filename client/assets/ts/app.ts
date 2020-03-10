@@ -1,5 +1,5 @@
 import '../scss/app.scss';
 
-import Terminal from './Util/Terminal';
+import WebSocketClient from './Util/WebSocketClient';
 
-new Terminal(document.getElementById('xterm-container'));
+new WebSocketClient(document.getElementById('xterm-container'));
