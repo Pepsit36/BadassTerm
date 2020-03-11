@@ -3,77 +3,49 @@ import Terminal from './Terminal';
 
 export default class WebSocketClient {
     private readonly wsClient: WebSocket;
+    private terminal: Terminal;
+    private channelId: string;
 
-    private readonly channels: object = {};
+    constructor($xtermContainer: HTMLElement, websocketUrl: string, channel?: string) {
+        this.wsClient = new WebSocket(websocketUrl);
 
-    private $xtermContainer: HTMLElement = null;
+        this.terminal = new Terminal($xtermContainer);
 
-    constructor($xtermContainer: HTMLElement) {
-        this.$xtermContainer = $xtermContainer;
-
-        this.wsClient = new WebSocket(window.location.href.replace('http', 'ws'));
-
-        this.wsClient.onopen = () => {
+        this.terminal.onData = (data: string) => {
+            this.sendToTerminal(data);
         };
 
-        this.wsClient.onmessage = (message: MessageEvent) => {
-            const webSocketMessage: WebSocketMessage = WebSocketMessage.unserialize(message.data);
+        this.terminal.onBinary = (data: string) => {
+            const buffer = new Uint8Array(data.length);
+            for (let i = 0; i < data.length; ++i) {
+                buffer[i] = data.charCodeAt(i) & 255;
+            }
+
+            this.sendToTerminal(buffer);
+        };
+
+        this.wsClient.onopen = () => {
+            this.send(
+                new WebSocketMessage(
+                    {
+                        channelId: channel
+                    },
+                    WebSocketMessageTypes.CHANNEL
+                )
+            );
+        };
+
+        this.wsClient.onmessage = (messageEvent: MessageEvent) => {
+            const webSocketMessage: WebSocketMessage = WebSocketMessage.unserialize(messageEvent.data);
 
             if (!webSocketMessage.getChannel()) {
                 if (webSocketMessage.getAction() === WebSocketMessageTypes.CHANNEL) {
-                    if (!this.$xtermContainer) {
-                        console.error('No $xtermContainer sent.');
-                        return;
-                    }
-                    const channel = webSocketMessage.getMessage().uuid;
-                    const terminal: Terminal = new Terminal(this.$xtermContainer);
-                    terminal.onData = (data: string) => {
-                        this.wsClient.send(
-                            WebSocketMessage.serialize(
-                                new WebSocketMessage(
-                                    data,
-                                    WebSocketMessageTypes.TERMINAL,
-                                    channel
-                                )
-                            )
-                        );
-                    };
-
-                    terminal.onBinary = (data: string) => {
-                        const buffer = new Uint8Array(data.length);
-                        for (let i = 0; i < data.length; ++i) {
-                            buffer[i] = data.charCodeAt(i) & 255;
-                        }
-
-                        this.wsClient.send(
-                            WebSocketMessage.serialize(
-                                new WebSocketMessage(
-                                    buffer,
-                                    WebSocketMessageTypes.TERMINAL,
-                                    channel
-                                )
-                            )
-                        );
-                    };
-
-                    this.channels[channel] = terminal;
-                    this.$xtermContainer = null;
-
-                    this.wsClient.send(
-                        WebSocketMessage.serialize(
-                            new WebSocketMessage(
-                                'ls\n',
-                                WebSocketMessageTypes.TERMINAL,
-                                webSocketMessage.getMessage().uuid
-                            )
-                        )
-                    );
+                    this.channelId = webSocketMessage.getMessage().channelId;
                 }
                 return;
             } else {
                 if (webSocketMessage.getAction() === WebSocketMessageTypes.TERMINAL) {
-                    const terminal: Terminal = this.channels[webSocketMessage.getChannel()];
-                    terminal.write(webSocketMessage.getMessage());
+                    this.terminal.write(webSocketMessage.getMessage());
                 }
             }
         };
@@ -81,5 +53,19 @@ export default class WebSocketClient {
         this.wsClient.onerror = (e) => {
             throw e;
         };
+    }
+
+    private sendToTerminal(data) {
+        this.send(
+            new WebSocketMessage(
+                data,
+                WebSocketMessageTypes.TERMINAL,
+                this.channelId
+            )
+        );
+    }
+
+    private send(webSocketMessage: WebSocketMessage) {
+        this.wsClient.send(WebSocketMessage.serialize(webSocketMessage));
     }
 }

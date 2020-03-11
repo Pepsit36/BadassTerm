@@ -17,11 +17,9 @@ export default class Terminal {
         this.xterm.open(xtermContainer);
 
         this.xterm.onData((data) => {
-            console.log(data);
             this.onData(data);
         });
         this.xterm.onBinary((data) => {
-            console.log(data);
             this.onData(data);
         });
 
