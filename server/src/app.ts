@@ -2,7 +2,7 @@ import {Server as StaticServer} from 'node-static';
 import http, {Server} from 'http';
 import fs from 'fs';
 
-import Terminal from './Util/Terminal';
+import WebSocketServer from './Util/WebSocketServer';
 import Config from './Util/Config';
 
 const fileServer = new StaticServer('../client/public/');
@@ -27,7 +27,7 @@ const server: Server = http.createServer((req, res) => {
     }).resume();
 });
 
-new Terminal(server);
+new WebSocketServer(server);
 
 server.listen(port, host);
 
